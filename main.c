@@ -1,13 +1,19 @@
 /*
 ** ===========================================================================
-** File: ExtHS.cpp
+** File: main.c
 ** Description: Program main code
 ** Copyright (c) 2024 raulmrio28-git.
 ** History:
 ** when			who				what, where, why
 ** MM-DD-YYYY-- --------------- --------------------------------
-** 07/26/2024	raulmrio28-git	Initial version
+** 08/25/2024	raulmrio28-git	Initial version
 ** ===========================================================================
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Includes
+**----------------------------------------------------------------------------
 */
 
 #include <stdio.h>
@@ -17,64 +23,96 @@
 #include "common.h"
 #include "convert.h"
 #include "decode.h"
+
+/*
+**----------------------------------------------------------------------------
+**  Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Type Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Global variables
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Internal variables
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Function(internal use only) Declarations
+**----------------------------------------------------------------------------
+*/
+
 int main(int argc, char* argv[])
 {
 	if (argc >= 2)
 	{
-		char fn[256];
+		char szFn[256];
 		if (strcmp(argv[1], "-d") == 0)
 		{
-			FILE* fp = fopen(argv[2], "rb");
-			uint8_t* buff;
-			uint16_t* buffd;
-			int len;
-			int width, height, frms;
-			int cfrm;
-			if (!fp)
+			FILE* pFile = fopen(argv[2], "rb");
+			uint8_t* pData;
+			uint16_t* pDec;
+			int nSize;
+			int nWidth = 0, nHeight = 0, nFrames = 0;
+			int nCurrFrame;
+			if (!pFile)
 			{
 				printf("Failed to open file %s\n", argv[2]);
 				return 1;
 			}
-			fseek(fp, 0, SEEK_END);
-			len = ftell(fp);
-			fseek(fp, 0, SEEK_SET);
-			buff = (uint8_t*)malloc(len);
-			if (!buff)
+			fseek(pFile, 0, SEEK_END);
+			nSize = ftell(pFile);
+			fseek(pFile, 0, SEEK_SET);
+			pData = (uint8_t*)malloc(nSize);
+			if (!pData)
 			{
 				printf("Failed to allocate memory\n");
 				return 1;
 			}
-			fread(buff, 1, len, fp);
-			fclose(fp);
-			rls_common_getinfo(buff, &frms, &width, &height, NULL);
-			if (frms == 0 || width == 0 || height == 0)
+			fread(pData, 1, nSize, pFile);
+			fclose(pFile);
+			RLS_Common_GetInfo(pData, &nFrames, &nWidth, &nHeight, NULL);
+			if (nFrames == 0 || nWidth == 0 || nHeight == 0)
 			{
 				printf("Failed to get info from file %s\n", argv[2]);
 				return 1;
 			}
-			printf("Width: %d, Height: %d, Frames: %d\n", width, height, frms);
+			printf("Width: %d, Height: %d, Frames: %d\n",
+				   nWidth,nHeight,nFrames);
 			
-			buffd = (uint16_t*)malloc(width * height * sizeof(uint16_t));
-			if (!buffd)
+			pDec = (uint16_t*)malloc(nWidth * nHeight * sizeof(uint16_t));
+			if (!pDec)
 			{
 				printf("Failed to allocate memory\n");
 				return 1;
 			}
-			for (cfrm = 0; cfrm < frms; cfrm++)
+			for (nCurrFrame = 0; nCurrFrame < nFrames; nCurrFrame++)
 			{
-				if (rls_decode(buff, cfrm, buffd) == false)
+				if (RLS_Decode(pData, nCurrFrame, pDec) == false)
 				{
-					printf("Failed to decode frame %d\n", cfrm);
+					printf("Failed to decode frame %d\n", nCurrFrame);
 					return 1;
 				}
-				sprintf(fn, "%s_%d.png", argv[2], cfrm);
-				if (rls_convert_5652png(fn, buffd, width, height) == false)
+				sprintf(szFn, "%s_%d.png", argv[2], nCurrFrame);
+				if (RLS_Convert_565toPNG(pDec,szFn,nWidth,nHeight)==false)
 				{
-					printf("Failed to convert frame %d\n", cfrm);
+					printf("Failed to convert frame %d\n", nCurrFrame);
 					return 1;
 				}
 			}
-			free(buffd);
+			free(pDec);
 		}
 		else
 		{

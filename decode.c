@@ -1,98 +1,241 @@
+/*
+** ===========================================================================
+** File: common.c
+** Description: ReakoLite library decoder code
+** Copyright (c) 2024 raulmrio28-git.
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ===========================================================================
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Includes
+**----------------------------------------------------------------------------
+*/
+
 #define RLS_EXTERN_VAR
 #include "common.h"
 #include <stdio.h>
 #include <memory.h>
 
-int rls_decode_block(unsigned char* input, unsigned short* output)
+/*
+**----------------------------------------------------------------------------
+**  Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Type Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Global variables
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Internal variables
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Function(internal use only) Declarations
+**----------------------------------------------------------------------------
+*/
+
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Decode_DecodeBlk
+**
+** Description:
+**     Decode a block from input data
+**
+** pData:
+**     pIn - input data
+**     pOut - output data
+**
+** Output:
+**     Decoded block to pOut
+**
+** Return value:
+**     nOffset
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+uint32_t RLS_Decode_DecodeBlk(uint8_t* pIn, uint16_t* pOut)
 {
-	rls_bki_t bk_info;
-	int bk_pix;
-	int o = 0;
-	memcpy(&bk_info, &input[o++], sizeof(rls_bki_t));
-	if (bk_info.pb_idx == 0xf) {
-		for (bk_pix = 0; bk_pix < 2*2; bk_pix++)
+	RLSBkInfo_T tBkInfo;
+	uint8_t nBkPix;
+	uint32_t nOffset = 0;
+	memcpy(&tBkInfo, &pIn[nOffset++], sizeof(RLSBkInfo_T));
+	if (tBkInfo.nPbIdx == 0xf) {
+		for (nBkPix = 0; nBkPix < 2*2; nBkPix++)
 		{
-			if (RLS_BKI_PU_GB(bk_info.pt_bits, bk_pix) == RLS_BKI_PAL_EP)
-				rls_common_block[bk_pix] = rls_common_epal[rls_common_epal_cidx++];
+			if (RLS_BKI_PU_GB(tBkInfo.baPalBits, nBkPix) == RLS_BKI_PAL_EP)
+				RLS_Common_Block[nBkPix]
+			  = RLS_Common_ExtPal[RLS_Common_ExtPal_CIdx++];
 		}
 	}
 	else {
-		uint8_t pal_bits = rls_common_pbits[bk_info.pb_idx];
-		uint8_t bk_idx = rls_common_bkidx[bk_info.pb_idx];
-		for (bk_pix = 0; bk_pix < 2*2; bk_pix++)
+		uint8_t pal_bits = RLS_Common_PalBits[tBkInfo.nPbIdx];
+		uint8_t bk_idx = RLS_Common_BkIdx[tBkInfo.nPbIdx];
+		for (nBkPix = 0; nBkPix < 2*2; nBkPix++)
 		{
-			if (RLS_BKI_PU_GB(pal_bits, bk_pix) == RLS_BKI_PU_USEB && bk_pix > 0)
-				rls_common_block[bk_pix]=rls_common_block[RLS_BKI_BI_GB(bk_idx,bk_pix)];
+			if (RLS_BKI_PU_GB(pal_bits, nBkPix)==RLS_BKI_PU_USEB && nBkPix>0)
+				RLS_Common_Block[nBkPix]
+			   =RLS_Common_Block[RLS_BKI_BI_GB(bk_idx,nBkPix)];
 			else
 			{
-				if (RLS_BKI_PU_GB(bk_info.pt_bits, bk_pix) == RLS_BKI_PAL_SP)
-					rls_common_block[bk_pix] = rls_common_spal[input[o++]];
+				if (RLS_BKI_PU_GB(tBkInfo.baPalBits, nBkPix)==RLS_BKI_PAL_SP)
+					RLS_Common_Block[nBkPix]
+				  = RLS_Common_StdPal[pIn[nOffset++]];
 				else
-					rls_common_block[bk_pix] = rls_common_epal[rls_common_epal_cidx++];
+					RLS_Common_Block[nBkPix]
+				  = RLS_Common_ExtPal[RLS_Common_ExtPal_CIdx++];
 
 			}
 		}
 	}
-	return o;
+	return nOffset;
 }
 
-uint32_t rls_decode_frame(uint8_t* input, uint16_t* output, int width, int height)
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Decode_Frame
+**
+** Description:
+**     Decode a frame from input data
+**
+** pData:
+**     pIn - input data
+**     pOut - output data
+**     nWidth - width
+**     nHeight - height
+**
+** Output:
+**     Decoded frame to pOut
+**
+** Return value:
+**     pCurrInput - pIn
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+uint32_t RLS_Decode_Frame(uint8_t* pIn,uint16_t* pOut,int nWidth,int nHeight)
 {
-	uint8_t* curr_input = input;
-	uint8_t* dat_end;
-	bool skip_write = false;
-	int bk_cols = RLS_CEIL(width, 2);
-	int bk_rows = RLS_CEIL(height, 2);
-	int c_bk_col, c_bk_row;
-	if (!output)
-		skip_write = true;
-	memcpy(rls_common_spal, curr_input, RLS_SPAL_SIZE * RLS_PAL_BYTES);
-	curr_input += RLS_SPAL_SIZE * RLS_PAL_BYTES;
-	if (*(uint32_t*)curr_input > RLS_EPAL_SIZE * RLS_PAL_BYTES) /* Ext. pal. buffer over limit */
+	uint8_t* pCurrInput = pIn;
+	uint8_t* pInputEnd;
+	bool bNoWrite = false;
+	int nCols = RLS_CEIL(nWidth, 2);
+	int nRows = RLS_CEIL(nHeight, 2);
+	int nCurrCol, nCurrCow;
+
+	if (!pOut)
+		bNoWrite = true;
+	memcpy(RLS_Common_StdPal, pCurrInput, RLS_SPAL_SIZE * RLS_PAL_BYTES);
+	pCurrInput += RLS_SPAL_SIZE * RLS_PAL_BYTES;
+	if (*(uint32_t*)pCurrInput > RLS_EPAL_SIZE * RLS_PAL_BYTES)
 		return 0;
-	memcpy(rls_common_epal, curr_input + sizeof(uint32_t), *(uint32_t*)curr_input);
-	rls_common_epal_cidx = 0;
-	curr_input += *(uint32_t*)curr_input + sizeof(uint32_t);
-	dat_end = curr_input + *(uint32_t*)curr_input + sizeof(uint32_t);
-	curr_input += sizeof(uint32_t);
-	while (curr_input < dat_end)
+	memcpy(RLS_Common_ExtPal, pCurrInput + sizeof(uint32_t),
+		   *(uint32_t*)pCurrInput);
+	RLS_Common_ExtPal_CIdx = 0;
+	pCurrInput += *(uint32_t*)pCurrInput + sizeof(uint32_t);
+	pInputEnd = pCurrInput + *(uint32_t*)pCurrInput + sizeof(uint32_t);
+	pCurrInput += sizeof(uint32_t);
+	while (pCurrInput < pInputEnd)
 	{
-		for (c_bk_row = 0; c_bk_row < bk_rows; c_bk_row++)
+		for (nCurrCow = 0; nCurrCow < nRows; nCurrCow++)
 		{
-			for (c_bk_col = 0; c_bk_col < bk_cols; c_bk_col++)
+			for (nCurrCol = 0; nCurrCol < nCols; nCurrCol++)
 			{
-				if (skip_write == false && rls_extract_block(output, width, height, c_bk_col, c_bk_row) == false)
+				if (bNoWrite == false && RLS_Common_ExtractBlock(pOut, nWidth,
+					nHeight, nCurrCol, nCurrCow) == false)
 					return 0;
-				curr_input += rls_decode_block(curr_input, rls_common_block);
-				if (skip_write == false && rls_write_block(output, width, height, c_bk_col, c_bk_row) == false)
+				pCurrInput += RLS_Decode_DecodeBlk(pCurrInput,
+												   RLS_Common_Block);
+				if (bNoWrite == false && RLS_Common_WriteBlock(pOut, nWidth,
+					nHeight, nCurrCol, nCurrCow) == false)
 					return 0;
 			}
 		}
 	}
-	return (uint32_t)(curr_input - input);
+	return (uint32_t)(pCurrInput - pIn);
 }
-bool rls_decode(uint8_t* input, int frame, uint16_t* output)
+
+/*
+**----------------------------------------------------------------------------
+**  Function(external use only) Declarations
+**----------------------------------------------------------------------------
+*/
+
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Decode
+**
+** Description:
+**     Decode a frame from container
+**
+** pData:
+**     pIn - input data
+**     nFrame - frame to decode
+**     pOut - output data
+**
+** Output:
+**     Decoded frame to pOut
+**
+** Return value:
+**     true/false
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+bool RLS_Decode(uint8_t* pIn, int nFrame, uint16_t* pOut)
 {
-	uint8_t* curr_input = input;
+	uint8_t* pCurrInput = pIn;
 
-	if (*(uint16_t*)curr_input == RLS_MAGIC) {
-		int skip_frame;
-		int offs_to_palette;
-		int frames;
-		int palette_bytes;
-		int width;
-		int height;
-		offs_to_palette = rls_common_getinfo(curr_input, &frames, &width, &height, &palette_bytes);
-		if (offs_to_palette == -1) /* Invalid information */
+	if (*(uint16_t*)pCurrInput == RLS_MAGIC) {
+		int nSkipFrames;
+		int nStart;
+		int nFrames;
+		int nWidth;
+		int nHeight;
+		nStart = RLS_Common_GetInfo(pCurrInput, &nFrames, &nWidth,
+									&nHeight, NULL);
+		if (nStart == -1) /* Invalid information */
 			return false;
-		curr_input+=offs_to_palette;
-		if (frame >= frames)
+		pCurrInput+=nStart;
+		if (nFrame >= nFrames)
 			return false;
-		for (skip_frame = 0; skip_frame < frames-1; skip_frame++)
-			curr_input+=rls_decode_frame(curr_input, NULL, width, height);
-		if (rls_decode_frame(curr_input, output, width, height))
+		for (nSkipFrames = 0; nSkipFrames < nFrame-1; nSkipFrames++)
+			pCurrInput+=RLS_Decode_Frame(pCurrInput, NULL, nWidth, nHeight);
+		if (RLS_Decode_Frame(pCurrInput, pOut, nWidth, nHeight))
 			return true;
-
 	}
 	return false;
 }

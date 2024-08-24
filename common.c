@@ -1,10 +1,47 @@
+/*
+** ===========================================================================
+** File: common.c
+** Description: ReakoLite library common code
+** Copyright (c) 2024 raulmrio28-git.
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ===========================================================================
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Includes
+**----------------------------------------------------------------------------
+*/
+
 #include "common.h"
 #include <stdio.h>
-uint16_t rls_common_spal[RLS_SPAL_SIZE];
-uint16_t rls_common_epal[RLS_EPAL_SIZE];
 
-uint16_t rls_common_block[2*2];
-uint32_t rls_common_epal_cidx;
+/*
+**----------------------------------------------------------------------------
+**  Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Type Definitions
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Global variables
+**----------------------------------------------------------------------------
+*/
+
+uint16_t RLS_Common_StdPal[RLS_SPAL_SIZE];
+uint16_t RLS_Common_ExtPal[RLS_EPAL_SIZE];
+
+uint16_t RLS_Common_Block[2*2];
+uint32_t RLS_Common_ExtPal_CIdx;
 
 /* 
    Blocks legend: P - pal idx, I - reused pixel idx in blk
@@ -27,7 +64,7 @@ uint32_t rls_common_epal_cidx;
        ---------   ---------   ---------   ---------     
 */
 
-uint8_t rls_common_bkidx[16] =
+uint8_t RLS_Common_BkIdx[16] =
 {
 	0b00000000, 0b00010101, 0b00010000, 0b00000100,
 	0b00000001, 0b00010001, 0b00000110, 0b00010100,
@@ -35,7 +72,7 @@ uint8_t rls_common_bkidx[16] =
 	0b00011010, 0b00010110, 0b00011011, 0b00011011
 };
 
-uint8_t rls_common_pbits[16] =
+uint8_t RLS_Common_PalBits[16] =
 {
 	0b1000, 0b1100, 0b1100, 0b1010,
 	0b1001, 0b1100, 0b1010, 0b1100,
@@ -43,81 +80,189 @@ uint8_t rls_common_pbits[16] =
 	0b1110, 0b1101, 0b1111, 0b0000
 };
 
-int rls_common_getinfo(uint8_t* input, int* frames, int* width, int* height, int* p_bytes)
+/*
+**----------------------------------------------------------------------------
+**  Internal variables
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Function(internal use only) Declarations
+**----------------------------------------------------------------------------
+*/
+
+/*
+**----------------------------------------------------------------------------
+**  Function(external use only) Declarations
+**----------------------------------------------------------------------------
+*/
+
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Common_GetInfo
+**
+** Description:
+**     Gets info of image container
+**
+** pData:
+**     pData - Source data
+**     pnFrames - Frame count pointer
+**     pnWidth - Width pointer
+**     pnHeight - Height pointer
+**     pnPixBytes - Pixel bytes pointer
+**
+** Output:
+**     Set values
+**
+** Return value:
+**     12 (if data is valid)/0
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+int RLS_Common_GetInfo(uint8_t* pData, int* pnFrames, int* pnWidth,
+					   int* pnHeight, int* pnPixBytes)
 {
-	rls_base_header_t* header = (rls_base_header_t*)input;
-	if (header->magic == RLS_MAGIC)
+	RLSBaseHeader_T* ptHeader = (RLSBaseHeader_T*)pData;
+	if (ptHeader->wMagic == RLS_MAGIC)
 	{
-		*frames = header->frames;
-		if (header->version = 0x1210)
+		*pnFrames = ptHeader->nFrames;
+		if (ptHeader->wVersion = 0x1210)
 		{
-			rls_img_header_12_t* info =	(rls_img_header_12_t*)
-										(input+sizeof(rls_base_header_t));
-			if (width)
-				*width = info->width;
-			if (height)
-				*height = info->height;
-			if (p_bytes)
-				*p_bytes = info->p_bytes;
+			RLSInfoHeader12_T* ptInfo =	(RLSInfoHeader12_T*)
+										(pData+sizeof(RLSBaseHeader_T));
+			if (pnWidth)
+				*pnWidth = ptInfo->nWidth;
+			if (pnHeight)
+				*pnHeight = ptInfo->nHeight;
+			if (pnPixBytes)
+				*pnPixBytes = ptInfo->nPixBytes;
 		}
-		else if (header->version = 0x1013)
+		else if (ptHeader->wVersion = 0x1013)
 		{
-			rls_img_header_13_t* info = (rls_img_header_13_t*)
-										(input+sizeof(rls_base_header_t));
-			if (width)
-				*width = info->width;
-			if (height)
-				*height = info->height;
-			if (p_bytes)
-				*p_bytes = info->p_bytes;
+			RLSInfoHeader13_T* ptInfo = (RLSInfoHeader13_T*)
+										(pData+sizeof(RLSBaseHeader_T));
+			if (pnWidth)
+				*pnWidth = ptInfo->nWidth;
+			if (pnHeight)
+				*pnHeight = ptInfo->nHeight;
+			if (pnPixBytes)
+				*pnPixBytes = ptInfo->nPixBytes;
 		}
-		if (p_bytes && *p_bytes != RLS_PAL_BYTES)
+		if (pnPixBytes && *pnPixBytes != RLS_PAL_BYTES)
 			return 0;
 		return 12;
 	}
 	return 0;
 }
 
-bool rls_extract_block(uint16_t* img, int w, int h, int bkx, int bky)
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Common_ExtractBlock
+**
+** Description:
+**     Extracts a 2x2 block from an image
+**
+** pData:
+**     pImg - Source image
+**     nWidth - Image width
+**     nHeight - Image height
+**     nX - X position
+**     nY - Y position
+**
+** Output:
+**     Extracted block
+**
+** Return value:
+**     true/false
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+bool RLS_Common_ExtractBlock(uint16_t* pImg, int nWidth, int nHeight, int nX,
+							 int nY)
 {
-	if (!img || bkx >= (w >> 1) || bky >= (h >> 1))
+	if (!pImg || nX >= (nWidth >> 1) || nY >= (nHeight >> 1))
 		return false;
-	rls_common_block[0] = img[w * (bky << 1) + (bkx << 1)];
-	if ((w&1 && (w+1) == (bkx<<1)) && (h&1 && (h+1) == (bky<<1)))
+	RLS_Common_Block[0] = pImg[nWidth * (nY << 1) + (nX << 1)];
+	if ((nWidth&1 && (nWidth+1) == (nX<<1))
+	 && (nHeight&1 && (nHeight+1) == (nY<<1)))
 	{
-		rls_common_block[1] = rls_common_block[2]
-	  = rls_common_block[3] = rls_common_block[0];
+		RLS_Common_Block[1] = RLS_Common_Block[2]
+	  = RLS_Common_Block[3] = RLS_Common_Block[0];
 	}
-	else if (w&1 && (w+1) == (bkx<<1))
+	else if (nWidth&1 && (nWidth+1) == (nX<<1))
 	{
-		rls_common_block[1] = rls_common_block[0];
-		rls_common_block[2] = img[w * ((bky<<1) + 1) + (bkx<<1)];
-		rls_common_block[3] = rls_common_block[2];
+		RLS_Common_Block[1] = RLS_Common_Block[0];
+		RLS_Common_Block[2] = pImg[nWidth * ((nY<<1) + 1) + (nX<<1)];
+		RLS_Common_Block[3] = RLS_Common_Block[2];
 	}
 	else
 	{
-		rls_common_block[1] = img[w * (bky<<1) + ((bkx<<1) + 1)];
-		rls_common_block[2] = img[w * ((bky<<1) + 1) + (bkx<<1)];
-		rls_common_block[3] = img[w * ((bky<<1) + 1) + ((bkx<<1) + 1)];
+		RLS_Common_Block[1] = pImg[nWidth * (nY<<1) + ((nX<<1) + 1)];
+		RLS_Common_Block[2] = pImg[nWidth * ((nY<<1) + 1) + (nX<<1)];
+		RLS_Common_Block[3] = pImg[nWidth * ((nY<<1) + 1) + ((nX<<1) + 1)];
 	}
 
 	return true;
 }
 
-bool rls_write_block(uint16_t* img, int w, int h, int bkx, int bky)
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Common_WriteBlock
+**
+** Description:
+**     Writess a 2x2 block to an image
+**
+** pData:
+**     pImg - Dest image
+**     nWidth - Image width
+**     nHeight - Image height
+**     nX - X position
+**     nY - Y position
+**
+** Output:
+**     Written block
+**
+** Return value:
+**     true/false
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/23/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+bool RLS_Common_WriteBlock(uint16_t* pImg, int nWidth, int nHeight, int nX,
+						   int nY)
 {
-	if (!img || bkx >= (w >> 1) || bky >= (h >> 1))
+	if (!pImg || nX >= (nWidth >> 1) || nY >= (nHeight >> 1))
 		return false;
-	img[w * (bky<<1) + (bkx<<1)] = rls_common_block[0];
-	if (w&1 && (w+1) == (bkx<<1))
+	pImg[nWidth * (nY<<1) + (nX<<1)] = RLS_Common_Block[0];
+	if (nWidth&1 && (nWidth+1) == (nX<<1))
 	{
-		img[w * ((bky<<1)+1) + (bkx<<1)] = rls_common_block[2];
+		pImg[nWidth * ((nY<<1)+1) + (nX<<1)] = RLS_Common_Block[2];
 	}
 	else
 	{
-		img[w * (bky<<1) + (bkx<<1)+1] = rls_common_block[1];
-		img[w * ((bky<<1)+1) + (bkx<<1)] = rls_common_block[2];
-		img[w * ((bky<<1)+1) + (bkx<<1)+1] = rls_common_block[3];
+		pImg[nWidth * (nY<<1) + (nX<<1)+1] = RLS_Common_Block[1];
+		pImg[nWidth * ((nY<<1)+1) + (nX<<1)] = RLS_Common_Block[2];
+		pImg[nWidth * ((nY<<1)+1) + (nX<<1)+1] = RLS_Common_Block[3];
 	}
 
 	return true;
