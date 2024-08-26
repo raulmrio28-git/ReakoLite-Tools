@@ -33,6 +33,9 @@
     <ClCompile Include="convert.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="encode.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
@@ -48,6 +51,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="convert.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="encode.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

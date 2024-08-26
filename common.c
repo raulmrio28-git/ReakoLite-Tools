@@ -6,6 +6,7 @@
 ** History:
 ** when			who				what, where, why
 ** MM-DD-YYYY-- --------------- --------------------------------
+** 08/26/2024	raulmrio28-git	Add header creation
 ** 08/23/2024	raulmrio28-git	Initial version
 ** ===========================================================================
 */
@@ -69,7 +70,7 @@ uint8_t RLS_Common_BkIdx[16] =
 	0b00000000, 0b00010101, 0b00010000, 0b00000100,
 	0b00000001, 0b00010001, 0b00000110, 0b00010100,
 	0b00010010, 0b00000110, 0b00011000, 0b00011001,
-	0b00011010, 0b00010110, 0b00011011, 0b00011011
+	0b00011010, 0b00010110, 0b00011011, 0b11111111
 };
 
 uint8_t RLS_Common_PalBits[16] =
@@ -77,7 +78,7 @@ uint8_t RLS_Common_PalBits[16] =
 	0b1000, 0b1100, 0b1100, 0b1010,
 	0b1001, 0b1100, 0b1010, 0b1100,
 	0b1101, 0b1011, 0b1110, 0b1110,
-	0b1110, 0b1101, 0b1111, 0b0000
+	0b1110, 0b1101, 0b1111, 0b1111
 };
 
 /*
@@ -107,7 +108,7 @@ uint8_t RLS_Common_PalBits[16] =
 ** Description:
 **     Gets info of image container
 **
-** pData:
+** Input:
 **     pData - Source data
 **     pnFrames - Frame count pointer
 **     pnWidth - Width pointer
@@ -167,12 +168,79 @@ int RLS_Common_GetInfo(uint8_t* pData, int* pnFrames, int* pnWidth,
 ** ---------------------------------------------------------------------------
 **
 ** Function:
+**     RLS_Common_MakeInfo
+**
+** Description:
+**     Make info of image container
+**
+** Input:
+**     pData - Destination data
+**     nFrames - Frame count
+**     nWidth - Width
+**     nHeight - Height
+**
+** Output:
+**     Written values
+**
+** Return value:
+**     true/false
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/26/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+bool RLS_Common_MakeInfo(uint8_t* pData, int nFrames, int nWidth, int nHeight,
+						 int nSavings, bool bReserved)
+{
+	RLSBaseHeader_T tHeader;
+	if (!pData || nFrames <= 0 || nWidth <= 0 || nHeight <= 0)
+		return false;
+	tHeader.wMagic = RLS_MAGIC;
+	if (nWidth > UINT8_MAX || nHeight > UINT8_MAX)
+		tHeader.wVersion = 0x1013;
+	else
+		tHeader.wVersion = 0x1210;
+	tHeader.nFrames = nFrames;
+	memcpy(pData, &tHeader, sizeof(RLSBaseHeader_T));
+	if (tHeader.wVersion = 0x1210)
+	{
+		RLSInfoHeader12_T tInfo;
+		tInfo.nWidth = nWidth;
+		tInfo.nHeight = nHeight;
+		tInfo.nPixBytes = RLS_PAL_BYTES;
+		tInfo.tAttributes.nSavings = nSavings;
+		tInfo.tAttributes.bWOdd = nWidth % 1;
+		tInfo.tAttributes.bHOdd = nHeight % 1;
+		tInfo.tAttributes.bReserved = bReserved;
+		memcpy(pData+sizeof(RLSBaseHeader_T),&tInfo,sizeof(RLSInfoHeader12_T));
+	}
+	else if (tHeader.wVersion = 0x1013)
+	{
+		RLSInfoHeader13_T tInfo;
+		tInfo.nWidth = nWidth;
+		tInfo.nHeight = nHeight;
+		tInfo.nPixBytes = RLS_PAL_BYTES;
+		tInfo.tAttributes.nSavings = nSavings;
+		tInfo.tAttributes.bWOdd = nWidth % 1;
+		tInfo.tAttributes.bHOdd = nHeight % 1;
+		memcpy(pData+sizeof(RLSBaseHeader_T),&tInfo,sizeof(RLSInfoHeader13_T));
+	}
+	return true;
+}
+
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
 **     RLS_Common_ExtractBlock
 **
 ** Description:
 **     Extracts a 2x2 block from an image
 **
-** pData:
+** Input:
 **     pImg - Source image
 **     nWidth - Image width
 **     nHeight - Image height
@@ -229,7 +297,7 @@ bool RLS_Common_ExtractBlock(uint16_t* pImg, int nWidth, int nHeight, int nX,
 ** Description:
 **     Writess a 2x2 block to an image
 **
-** pData:
+** Input:
 **     pImg - Dest image
 **     nWidth - Image width
 **     nHeight - Image height

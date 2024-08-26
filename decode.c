@@ -1,6 +1,6 @@
 /*
 ** ===========================================================================
-** File: common.c
+** File: decode.c
 ** Description: ReakoLite library decoder code
 ** Copyright (c) 2024 raulmrio28-git.
 ** History:
@@ -26,6 +26,9 @@
 **  Definitions
 **----------------------------------------------------------------------------
 */
+
+#define RLS_BKI_PU_GB(v, i) ((v>>(3-i))&1)
+#define RLS_BKI_BI_GB(v, i) ((v>>((3-i)<<1))&3)
 
 /*
 **----------------------------------------------------------------------------
@@ -60,7 +63,7 @@
 ** Description:
 **     Decode a block from input data
 **
-** pData:
+** Input:
 **     pIn - input data
 **     pOut - output data
 **
@@ -123,7 +126,7 @@ uint32_t RLS_Decode_DecodeBlk(uint8_t* pIn, uint16_t* pOut)
 ** Description:
 **     Decode a frame from input data
 **
-** pData:
+** Input:
 **     pIn - input data
 **     pOut - output data
 **     nWidth - width
@@ -148,7 +151,7 @@ uint32_t RLS_Decode_Frame(uint8_t* pIn,uint16_t* pOut,int nWidth,int nHeight)
 	bool bNoWrite = false;
 	int nCols = RLS_CEIL(nWidth, 2);
 	int nRows = RLS_CEIL(nHeight, 2);
-	int nCurrCol, nCurrCow;
+	int nCurrCol, nCurrRow;
 
 	if (!pOut)
 		bNoWrite = true;
@@ -164,17 +167,17 @@ uint32_t RLS_Decode_Frame(uint8_t* pIn,uint16_t* pOut,int nWidth,int nHeight)
 	pCurrInput += sizeof(uint32_t);
 	while (pCurrInput < pInputEnd)
 	{
-		for (nCurrCow = 0; nCurrCow < nRows; nCurrCow++)
+		for (nCurrRow = 0; nCurrRow < nRows; nCurrRow++)
 		{
 			for (nCurrCol = 0; nCurrCol < nCols; nCurrCol++)
 			{
 				if (bNoWrite == false && RLS_Common_ExtractBlock(pOut, nWidth,
-					nHeight, nCurrCol, nCurrCow) == false)
+					nHeight, nCurrCol, nCurrRow) == false)
 					return 0;
 				pCurrInput += RLS_Decode_DecodeBlk(pCurrInput,
 												   RLS_Common_Block);
 				if (bNoWrite == false && RLS_Common_WriteBlock(pOut, nWidth,
-					nHeight, nCurrCol, nCurrCow) == false)
+					nHeight, nCurrCol, nCurrRow) == false)
 					return 0;
 			}
 		}
@@ -197,7 +200,7 @@ uint32_t RLS_Decode_Frame(uint8_t* pIn,uint16_t* pOut,int nWidth,int nHeight)
 ** Description:
 **     Decode a frame from container
 **
-** pData:
+** Input:
 **     pIn - input data
 **     nFrame - frame to decode
 **     pOut - output data

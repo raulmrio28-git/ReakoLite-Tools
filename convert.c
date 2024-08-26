@@ -6,6 +6,7 @@
 ** History:
 ** when			who				what, where, why
 ** MM-DD-YYYY-- --------------- --------------------------------
+** 08/26/2024	raulmrio28-git	PNG to RGB565
 ** 08/24/2024	raulmrio28-git	Initial version
 ** ===========================================================================
 */
@@ -64,7 +65,7 @@
 ** Description:
 **     Convert an RGB565 image to RGB888
 **
-** pData:
+** Input:
 **     pSrc - Source image
 **     pDest - Destination image
 **     nWidth - Width
@@ -109,7 +110,7 @@ bool RLS_Convert_565to888(RGB565_T* pSrc,RGB888_T* pDest,int nWidth,
 ** Description:
 **     Convert an RGB888 image to RGB565
 **
-** pData:
+** Input:
 **     pSrc - Source image
 **     pDest - Destination image
 **     nWidth - Width
@@ -158,7 +159,7 @@ bool RLS_Convert_888to565(RGB888_T* pSrc,RGB565_T* pDest,int nWidth,
 ** Description:
 **     Convert an RGB565 image to a PNG file
 **
-** pData:
+** Input:
 **     pszFn - File name
 **     pSrc - Source image
 **     nWidth - Width
@@ -179,7 +180,7 @@ bool RLS_Convert_888to565(RGB888_T* pSrc,RGB565_T* pDest,int nWidth,
 bool RLS_Convert_565toPNG(RGB565_T* pImg, const char* pszFn, int nWidth,
 						  int nHeight)
 {
-	int iSPNGResult;
+	int iSPNGResult = 0;
 	void* pPNGBuff;
 	size_t nPNGSize;
 	FILE* pFile;
@@ -231,4 +232,99 @@ bool RLS_Convert_565toPNG(RGB565_T* pImg, const char* pszFn, int nWidth,
 	free(pPNGBuff);
 	spng_ctx_free(ptPNGCtx);
 	return true;
+}
+
+/*
+** ---------------------------------------------------------------------------
+**
+** Function:
+**     RLS_Convert_PNGto565
+**
+** Description:
+**     Convert a PNG file to an RGB565 image
+**
+** Input:
+**     pszFn - File name
+**     pnWidth - Width
+**     pnHeight - Height
+**
+** Output:
+**     Converted image
+**
+** Return value:
+**     true/false
+**
+** History:
+** when			who				what, where, why
+** MM-DD-YYYY-- --------------- --------------------------------
+** 08/26/2024	raulmrio28-git	Initial version
+** ---------------------------------------------------------------------------
+*/
+
+RGB565_T* RLS_Convert_PNGto565(const char* pszFn, int* pnWidth, int* pnHeight)
+{
+	int iSPNGResult = 0;
+	uint8_t* pPNGBuff;
+	size_t nPNGSize;
+	FILE* pFile;
+	spng_ctx* ptPNGCtx = NULL;
+	struct spng_ihdr tPNGIHDR = { 0 }; /* zero-init to set valid defaults */
+	RGB888_T* tmp_sbuff;
+	RGB565_T* cvt_buff;
+
+	pFile = fopen(pszFn, "rb");
+	if (pFile == NULL) {
+		return false;
+	}
+	fseek(pFile, 0, SEEK_END);
+	nPNGSize = ftell(pFile);
+	fseek(pFile, 0, SEEK_SET);
+	pPNGBuff = (uint8_t*)malloc(nPNGSize);
+	if (pPNGBuff == NULL) {
+		fclose(pFile);
+		return false;
+	}
+	fread(pPNGBuff, nPNGSize, 1, pFile);
+	fclose(pFile);
+
+	ptPNGCtx = spng_ctx_new(0);
+
+	if (!ptPNGCtx)
+		return NULL;
+
+	spng_set_png_buffer(ptPNGCtx, pPNGBuff, nPNGSize, &iSPNGResult);
+
+	if (iSPNGResult) {
+		spng_ctx_free(ptPNGCtx);
+		return NULL;
+	}
+
+	if(spng_get_ihdr(ptPNGCtx, &tPNGIHDR))
+	{
+		spng_ctx_free(ptPNGCtx);
+		return NULL;
+	}
+
+	*pnWidth = tPNGIHDR.width;
+	*pnHeight = tPNGIHDR.height;
+
+	tmp_sbuff = (RGB888_T*)malloc(tPNGIHDR.width * tPNGIHDR.height
+							    * sizeof(RGB888_T));
+	if (!tmp_sbuff)
+		return NULL;
+	if (spng_decode_image(ptPNGCtx, tmp_sbuff,
+						  tPNGIHDR.width * tPNGIHDR.height
+						* sizeof(RGB888_T), SPNG_FMT_RGB8, 0))
+		return NULL;
+	cvt_buff = (RGB565_T*)malloc(tPNGIHDR.width * tPNGIHDR.height
+							    * sizeof(RGB565_T));
+	if (!cvt_buff)
+		return NULL;
+	if (RLS_Convert_888to565(tmp_sbuff, cvt_buff,
+							 tPNGIHDR.width,
+							 tPNGIHDR.height) == false)
+		return NULL;
+	free(tmp_sbuff);
+	spng_ctx_free(ptPNGCtx);
+	return cvt_buff;
 }

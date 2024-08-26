@@ -142,6 +142,7 @@
     <ClCompile Include="common.c" />
     <ClCompile Include="convert.c" />
     <ClCompile Include="decode.c" />
+    <ClCompile Include="encode.c" />
     <ClCompile Include="miniz\miniz.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="spng\spng.c" />
@@ -150,6 +151,7 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="convert.h" />
     <ClInclude Include="decode.h" />
+    <ClInclude Include="encode.h" />
     <ClInclude Include="miniz\miniz.h" />
     <ClInclude Include="spng\spng.h" />
   </ItemGroup>
