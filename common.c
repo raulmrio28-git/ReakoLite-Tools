@@ -135,7 +135,7 @@ int RLS_Common_GetInfo(uint8_t* pData, int* pnFrames, int* pnWidth,
 	if (ptHeader->wMagic == RLS_MAGIC)
 	{
 		*pnFrames = ptHeader->nFrames;
-		if (ptHeader->wVersion = 0x1210)
+		if (ptHeader->wVersion == 0x1210)
 		{
 			RLSInfoHeader12_T* ptInfo =	(RLSInfoHeader12_T*)
 										(pData+sizeof(RLSBaseHeader_T));
@@ -146,7 +146,7 @@ int RLS_Common_GetInfo(uint8_t* pData, int* pnFrames, int* pnWidth,
 			if (pnPixBytes)
 				*pnPixBytes = ptInfo->nPixBytes;
 		}
-		else if (ptHeader->wVersion = 0x1013)
+		else if (ptHeader->wVersion == 0x1013)
 		{
 			RLSInfoHeader13_T* ptInfo = (RLSInfoHeader13_T*)
 										(pData+sizeof(RLSBaseHeader_T));
@@ -205,7 +205,7 @@ bool RLS_Common_MakeInfo(uint8_t* pData, int nFrames, int nWidth, int nHeight,
 		tHeader.wVersion = 0x1210;
 	tHeader.nFrames = nFrames;
 	memcpy(pData, &tHeader, sizeof(RLSBaseHeader_T));
-	if (tHeader.wVersion = 0x1210)
+	if (tHeader.wVersion == 0x1210)
 	{
 		RLSInfoHeader12_T tInfo;
 		tInfo.nWidth = nWidth;
@@ -217,7 +217,7 @@ bool RLS_Common_MakeInfo(uint8_t* pData, int nFrames, int nWidth, int nHeight,
 		tInfo.tAttributes.bReserved = bReserved;
 		memcpy(pData+sizeof(RLSBaseHeader_T),&tInfo,sizeof(RLSInfoHeader12_T));
 	}
-	else if (tHeader.wVersion = 0x1013)
+	else if (tHeader.wVersion == 0x1013)
 	{
 		RLSInfoHeader13_T tInfo;
 		tInfo.nWidth = nWidth;
@@ -226,6 +226,7 @@ bool RLS_Common_MakeInfo(uint8_t* pData, int nFrames, int nWidth, int nHeight,
 		tInfo.tAttributes.nSavings = nSavings;
 		tInfo.tAttributes.bWOdd = nWidth % 1;
 		tInfo.tAttributes.bHOdd = nHeight % 1;
+		tInfo.tAttributes.bReserved = bReserved;
 		memcpy(pData+sizeof(RLSBaseHeader_T),&tInfo,sizeof(RLSInfoHeader13_T));
 	}
 	return true;
