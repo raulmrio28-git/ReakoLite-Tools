@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 			uint8_t* pCurrEnc;
 			int nSize;
 			int nWidth = 0, nHeight = 0;
-			int nFrames = 1;
+			int nFrames = argc - 3;
 			int nCurrFrame;
 			int nSavingCalcSize = 0;
 			if (_stricmp(FileExt(argv[3]), "png") != 0)
