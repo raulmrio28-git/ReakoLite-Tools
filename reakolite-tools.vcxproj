@@ -145,6 +145,7 @@
     <ClCompile Include="encode.c" />
     <ClCompile Include="miniz\miniz.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="quant.c" />
     <ClCompile Include="spng\spng.c" />
   </ItemGroup>
   <ItemGroup>

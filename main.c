@@ -60,6 +60,8 @@
 **----------------------------------------------------------------------------
 */
 
+extern void RLS_Quantize(RGB565_T* pImg, int nWidth, int nHeight);
+
 const char* FileExt(const char* pszFn)
 {
 	const char* pszFnSrch = pszFn + strlen(pszFn) - 1;
@@ -166,6 +168,7 @@ int main(int argc, char* argv[])
 			{
 				int nSize;
 				int nVW = nWidth, nVH = nHeight;
+				RLS_Quantize(pDec, nWidth, nHeight);
 				nSize = RLS_Encode(pDec, pCurrEnc, false, 0, nWidth, nHeight);
 				pCurrEnc += nSize;
 				nSavingCalcSize += nSize-(2*sizeof(uint32_t));

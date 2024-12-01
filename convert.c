@@ -292,12 +292,12 @@ RGB565_T* RLS_Convert_PNGto565(const char* pszFn, int* pnWidth, int* pnHeight)
 	if (!ptPNGCtx)
 		return NULL;
 
-	spng_set_png_buffer(ptPNGCtx, pPNGBuff, nPNGSize, &iSPNGResult);
+	spng_set_png_buffer(ptPNGCtx, pPNGBuff, nPNGSize);
 
-	if (iSPNGResult) {
-		spng_ctx_free(ptPNGCtx);
-		return NULL;
-	}
+	//if (iSPNGResult) {
+	//	spng_ctx_free(ptPNGCtx);
+	//	return NULL;
+	//}
 
 	if(spng_get_ihdr(ptPNGCtx, &tPNGIHDR))
 	{

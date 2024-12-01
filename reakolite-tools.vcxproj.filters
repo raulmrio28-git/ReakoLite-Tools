@@ -36,6 +36,9 @@
     <ClCompile Include="encode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="quant.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
