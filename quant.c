@@ -3,7 +3,8 @@
 ** File: quant.c
 ** Description: ReakoLite library encoder quantizer
 ** Notes: Names of variables and some code rules have been kept intact.
-** This does not apply to function that quantizes the whole image
+** This does not apply to function that quantizes the whole image.
+** This code contains part of ffmpeg code (libavcodec/rpzaenc.c)
 ** Copyright (c) 2024 raulmrio28-git.
 ** History:
 ** when			who				what, where, why
@@ -15,7 +16,7 @@
 // Original copyright and base code information below
 
 /*
- * QuickTime Quant Video Encoder
+ * QuickTime RPZA Video Encoder
  *
  * This file is part of FFmpeg.
  *
@@ -34,28 +35,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
- /**
-  * @file Quantenc.c
-  * QT Quant Video Encoder by Todd Kirby <doubleshot@pacbell.net> and David Adler
-  */
+/**
+ * @file rpzaenc.c
+ * QT RPZA Video Encoder by Todd Kirby <doubleshot@pacbell.net> and David Adler
+ */
 
-  // Original copyright and base code information above
+// Original copyright and base code information above
 
-  /*
-  **----------------------------------------------------------------------------
-  **  Includes
-  **----------------------------------------------------------------------------
-  */
+/*
+**----------------------------------------------------------------------------
+**  Includes
+**----------------------------------------------------------------------------
+*/
 
 #include "convert.h"
 #include "math.h"
 #include "string.h"
 
-  /*
-  **----------------------------------------------------------------------------
-  **  Definitions
-  **----------------------------------------------------------------------------
-  */
+/*
+**----------------------------------------------------------------------------
+**  Definitions
+**----------------------------------------------------------------------------
+*/
 
 #define QUANT_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define QUANT_MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -65,11 +66,11 @@
 #define G(color) RLS_Quant_GetChan(color, GREEN)
 #define B(color) RLS_Quant_GetChan(color, BLUE)
 
-  /*
-  **----------------------------------------------------------------------------
-  **  Type Definitions
-  **----------------------------------------------------------------------------
-  */
+/*
+**----------------------------------------------------------------------------
+**  Type Definitions
+**----------------------------------------------------------------------------
+*/
 
 typedef enum channel_offset
 {
