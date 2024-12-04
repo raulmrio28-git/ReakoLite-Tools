@@ -235,7 +235,7 @@ bool RLS_Decode(uint8_t* pIn, int nFrame, uint16_t* pOut)
 		pCurrInput+=nStart;
 		if (nFrame >= nFrames)
 			return false;
-		for (nSkipFrames = 0; nSkipFrames < nFrame-1; nSkipFrames++)
+		for (nSkipFrames = 0; nSkipFrames < nFrame; nSkipFrames++)
 			pCurrInput+=RLS_Decode_Frame(pCurrInput, NULL, nWidth, nHeight);
 		if (RLS_Decode_Frame(pCurrInput, pOut, nWidth, nHeight))
 			return true;
